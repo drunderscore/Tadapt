@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: true
+        submodules: "recursive"
 
     # Shamelessly stolen from Serenity
     - name: Use GCC 10 instead
