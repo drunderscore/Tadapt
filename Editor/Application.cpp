@@ -147,10 +147,16 @@ void Application::draw_tile_map()
 
     for (int x = 0; x < tiles_to_draw_x; x++)
     {
+        auto real_x = x + m_offset_x;
+        if (real_x >= m_current_world->m_max_tiles_x)
+            break;
+
         for (int y = 0; y < tiles_to_draw_y; y++)
         {
-            auto real_x = x + m_offset_x;
             auto real_y = y + m_offset_y;
+            if (real_y >= m_current_world->m_max_tiles_y)
+                break;
+
             auto& tile = m_current_world->tile_map()->at(real_x, real_y);
             if (tile.block().has_value())
             {
