@@ -1,0 +1,9 @@
+[submodule "Tappy"]
+	path = Tappy
+	url = https://github.com/drunderscore/Tappy
+[submodule "serenity"]
+	path = serenity
+	url = https://github.com/serenityos/serenity
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui
