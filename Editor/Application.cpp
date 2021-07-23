@@ -285,29 +285,34 @@ void Application::draw_tile_map()
 
 void Application::draw_selection_window()
 {
-    if (ImGui::Begin("Selection"))
+    if (ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         auto& tile = m_current_world->tile_map()->at(m_selected_tile_x, m_selected_tile_y);
-        if (tile.block().has_value())
+        if (ImGui::BeginChild("Selection Image", ImVec2(64, 64), true, ImGuiWindowFlags_NoScrollbar))
         {
-            short frame_x = 0;
-            short frame_y = 0;
+            if (tile.block().has_value())
+            {
+                short frame_x = 0;
+                short frame_y = 0;
 
-            if (tile.block()->frame_x().has_value())
-                frame_x = *tile.block()->frame_x();
+                if (tile.block()->frame_x().has_value())
+                    frame_x = *tile.block()->frame_x();
 
-            if (tile.block()->frame_y().has_value())
-                frame_y = *tile.block()->frame_y();
+                if (tile.block()->frame_y().has_value())
+                    frame_y = *tile.block()->frame_y();
 
-            auto tex = *m_tile_textures.get(static_cast<u16>(tile.block()->id()));
+                auto tex = *m_tile_textures.get(static_cast<u16>(tile.block()->id()));
 
-            ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(64, 64),
-                         ImVec2((float) frame_x / (float) tex.width,
-                                (float) frame_y / (float) tex.height),
-                         ImVec2(((float) frame_x + 16.0f) / (float) tex.width,
-                                ((float) frame_y + 16.0f) / (float) tex.height));
-            ImGui::Separator();
+                ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(64, 64),
+                             ImVec2((float) frame_x / (float) tex.width,
+                                    (float) frame_y / (float) tex.height),
+                             ImVec2(((float) frame_x + 16.0f) / (float) tex.width,
+                                    ((float) frame_y + 16.0f) / (float) tex.height));
+                ImGui::Separator();
+            }
         }
+
+        ImGui::EndChild();
 
         auto preview_string = tile.block().has_value() ?
                               String::formatted("{}",
@@ -316,6 +321,9 @@ void Application::draw_selection_window()
 
         if (ImGui::BeginCombo("Blocks", preview_string.characters()))
         {
+            if (ImGui::Selectable("None"))
+                tile.block() = {};
+
             for (auto& tex_for_blocks_combo : m_tile_textures)
             {
                 ImGui::Image(reinterpret_cast<void*>(tex_for_blocks_combo.value.gl_texture_id), ImVec2(16, 16),
@@ -334,12 +342,18 @@ void Application::draw_selection_window()
             ImGui::EndCombo();
         }
 
-        if (tile.block().has_value())
+        if (tile.block().has_value() && Terraria::s_tiles[static_cast<int>(tile.block()->id())].frame_important)
         {
-            if (ImGui::InputInt("Frame X", &m_selected_frame_x, 18) && tile.block().has_value())
+            ImGui::SetNextItemWidth(75.0f);
+            if (ImGui::InputInt("Frame X", &m_selected_frame_x, 18, 18) && tile.block().has_value())
                 tile.block()->frame_x() = m_selected_frame_x;
-            if (ImGui::InputInt("Frame Y", &m_selected_frame_y, 18) && tile.block().has_value())
+
+            ImGui::SameLine();
+
+            ImGui::SetNextItemWidth(75.0f);
+            if (ImGui::InputInt("Frame Y", &m_selected_frame_y, 18, 18) && tile.block().has_value())
                 tile.block()->frame_y() = m_selected_frame_y;
+
             ImGui::Separator();
         }
 

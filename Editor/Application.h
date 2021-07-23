@@ -30,7 +30,7 @@ private:
         int height;
     };
 
-    Texture load_texture(const RefPtr<Gfx::Bitmap>);
+    static Texture load_texture(const RefPtr<Gfx::Bitmap>);
 
     void draw_main_menu_bar();
 
