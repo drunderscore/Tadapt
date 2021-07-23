@@ -535,7 +535,7 @@ void Application::draw_selected_chest_window()
     ImGui::End();
 }
 
-Application::Texture Application::load_texture(const RefPtr<Gfx::Bitmap> bitmap)
+Application::Texture Application::load_texture(const RefPtr<Gfx::Bitmap>& bitmap)
 {
     Vector<Gfx::RGBA32> pixels;
     pixels.resize(bitmap->width() * bitmap->height());
