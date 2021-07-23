@@ -38,9 +38,14 @@ private:
 
     void draw_selection_window();
 
+    void draw_selected_chest_window();
+
     void load_all_tile_texture_sheets();
 
+    void load_all_item_texture_sheets();
+
     HashMap<u16, Texture> m_tile_textures;
+    HashMap<u16, Texture> m_item_textures;
     RefPtr<Terraria::World> m_current_world;
     Texture m_red_wire_texture;
     Texture m_blue_wire_texture;
@@ -59,6 +64,10 @@ private:
 
     int m_selected_frame_x{};
     int m_selected_frame_y{};
+
+    Terraria::Chest* m_selected_chest{};
+    i16 m_selected_chest_selected_item_stack;
+    u8 m_selected_chest_selected_item_prefix;
 
     bool m_selected_has_red_wire{};
     bool m_selected_has_blue_wire{};

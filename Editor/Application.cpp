@@ -17,7 +17,17 @@
 Application::Application(RefPtr<Terraria::World> world)
         : m_current_world(world)
 {
+    constexpr StringView content_directory = "Content";
+    if (!Core::File::exists(content_directory) || !Core::File::is_directory(content_directory))
+    {
+        // TODO: Write a better error message and instructions on how to get the content.
+        warnln("The Content directory could not be found.");
+        warnln("It is _not_ distributed with Tadapt, as it's contents are owned be Re-Logic.");
+        VERIFY_NOT_REACHED();
+    }
+
     load_all_tile_texture_sheets();
+    load_all_item_texture_sheets();
 }
 
 void Application::process_event(SDL_Event* event)
@@ -29,7 +39,8 @@ void Application::process_event(SDL_Event* event)
     }
     else if (event->type == SDL_MOUSEBUTTONDOWN)
     {
-        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
+        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_ChildWindows |
+                                    ImGuiHoveredFlags_AllowWhenBlockedByPopup) && !ImGui::IsAnyItemHovered())
         {
             if (event->button.button == SDL_BUTTON_LEFT)
             {
@@ -40,7 +51,8 @@ void Application::process_event(SDL_Event* event)
     }
     else if (event->type == SDL_MOUSEWHEEL)
     {
-        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
+        if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_ChildWindows |
+                                    ImGuiHoveredFlags_AllowWhenBlockedByPopup) && !ImGui::IsAnyItemHovered())
         {
             if ((SDL_GetModState() & KMOD_CTRL) != 0)
             {
@@ -79,6 +91,9 @@ void Application::draw()
         draw_tile_map();
         draw_selection_window();
     }
+
+    if (m_selected_chest)
+        draw_selected_chest_window();
 }
 
 void Application::set_selected_tile(int x, int y)
@@ -102,6 +117,20 @@ void Application::set_selected_tile(int x, int y)
         if (tile.block()->frame_y().has_value())
             m_selected_frame_y = *tile.block()->frame_y();
     }
+
+    bool found_chest;
+    for (auto& kv : m_current_world->chests())
+    {
+        if (kv.value.position().x() == m_selected_tile_x && kv.value.position().y() == m_selected_tile_y)
+        {
+            m_selected_chest = &kv.value;
+            found_chest = true;
+            break;
+        }
+    }
+
+    if (!found_chest)
+        m_selected_chest = nullptr;
 }
 
 void Application::draw_main_menu_bar()
@@ -288,8 +317,11 @@ void Application::draw_selection_window()
     if (ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         auto& tile = m_current_world->tile_map()->at(m_selected_tile_x, m_selected_tile_y);
-        if (ImGui::BeginChild("Selection Image", ImVec2(64, 64), true, ImGuiWindowFlags_NoScrollbar))
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        if (ImGui::BeginChild("Selection Image", ImVec2(64, 64), true,
+                              ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
         {
+            ImGui::PopStyleVar();
             if (tile.block().has_value())
             {
                 short frame_x = 0;
@@ -310,6 +342,10 @@ void Application::draw_selection_window()
                                     ((float) frame_y + 16.0f) / (float) tex.height));
                 ImGui::Separator();
             }
+        }
+        else
+        {
+            ImGui::PopStyleVar();
         }
 
         ImGui::EndChild();
@@ -379,6 +415,126 @@ void Application::draw_selection_window()
     ImGui::End();
 }
 
+void Application::draw_selected_chest_window()
+{
+    if (ImGui::Begin("Chest", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        // FIXME: Can we really assume chests will always have 40 slots? The world file doesn't.
+        for (auto i = 0; i < 40; i++)
+        {
+            auto formatted_name = String::formatted("ChestSlot{}", i);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            auto current_cursor = ImGui::GetCursorScreenPos();
+            if (ImGui::BeginChild(formatted_name.characters(), ImVec2(32, 32), true,
+                                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+            {
+                ImGui::PopStyleVar();
+                auto maybe_item = m_selected_chest->contents().get(i);
+                // TODO: This is an annoying check to perform, can we improve it?
+                // We can't use IsItemHovered as this isn't an item, it's a child window
+                // and we can't check for a specific child window without it considering other windows/child windows
+                // down the line (like the tooltip or popup)
+                bool hovered = ImGui::IsMouseHoveringRect(current_cursor,
+                                                          ImVec2(current_cursor.x + 32, current_cursor.y + 32));
+                if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                {
+                    if (maybe_item.has_value())
+                    {
+                        m_selected_chest_selected_item_stack = maybe_item->stack();
+                        m_selected_chest_selected_item_prefix = static_cast<u8>(maybe_item->prefix());
+                    }
+                    ImGui::OpenPopup("ModifyChestItem");
+                }
+
+                if (maybe_item.has_value())
+                {
+                    auto id = static_cast<int>(maybe_item->id());
+                    if (hovered)
+                        ImGui::SetTooltip("%s", Terraria::s_items[id - 1].english_name.to_string().characters());
+
+                    auto maybe_tex = m_item_textures.get(id);
+                    if (!maybe_tex.has_value())
+                    {
+                        warnln("Woah, we're missing texture for item id {}", id);
+                        VERIFY_NOT_REACHED();
+                    }
+                    auto tex = *maybe_tex;
+                    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - tex.width) * 0.5f);
+                    ImGui::SetCursorPosY((ImGui::GetWindowHeight() - tex.height) * 0.5f);
+                    ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(tex.width, tex.height));
+                    ImGui::SetCursorPos(ImVec2());
+                    ImGui::Text("%d", maybe_item->stack());
+                }
+
+                if (ImGui::BeginPopup("ModifyChestItem"))
+                {
+                    auto preview_string = maybe_item.has_value() ? String::formatted("{}", Terraria::s_items[
+                            static_cast<int>(maybe_item->id()) - 1].english_name) : String::empty();
+
+                    if (ImGui::BeginCombo("Items", preview_string.characters()))
+                    {
+                        if (ImGui::Selectable("None"))
+                            m_selected_chest->contents().remove(i);
+
+                        for (auto& tex_for_items_combo : m_item_textures)
+                        {
+                            // FIXME: stretching?
+                            ImGui::Image(reinterpret_cast<void*>(tex_for_items_combo.value.gl_texture_id),
+                                         ImVec2(16, 16));
+                            ImGui::SameLine();
+                            // FIXME: string allocation each time?? wtf, can't we just get the char* with a null term?
+                            if (ImGui::Selectable(String::formatted("{}", Terraria::s_items[
+                                    static_cast<int>(tex_for_items_combo.key) - 1].english_name).characters()))
+                            {
+                                if (!maybe_item.has_value())
+                                {
+                                    Terraria::Item item;
+                                    item.set_stack(1);
+                                    maybe_item = move(item);
+                                    m_selected_chest_selected_item_stack = 1;
+                                    m_selected_chest_selected_item_prefix = 0;
+                                }
+
+                                maybe_item->set_id(static_cast<Terraria::Item::Id>(tex_for_items_combo.key));
+                                m_selected_chest->contents().set(i, *maybe_item);
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+
+                    if (maybe_item.has_value())
+                    {
+                        ImGui::Separator();
+                        if (ImGui::InputScalar("Stack", ImGuiDataType_S16, &m_selected_chest_selected_item_stack))
+                        {
+                            maybe_item->set_stack(m_selected_chest_selected_item_stack);
+                            m_selected_chest->contents().set(i, *maybe_item);
+                        }
+                        if (ImGui::InputScalar("Prefix", ImGuiDataType_U8, &m_selected_chest_selected_item_prefix))
+                        {
+                            maybe_item->set_prefix(
+                                    static_cast<Terraria::Item::Prefix>(m_selected_chest_selected_item_prefix));
+                            m_selected_chest->contents().set(i, *maybe_item);
+                        }
+                    }
+                    ImGui::EndPopup();
+                }
+            }
+            else
+            {
+                ImGui::PopStyleVar();
+            }
+
+            ImGui::EndChild();
+
+            if ((i + 1) % 10 != 0)
+                ImGui::SameLine();
+        }
+    }
+
+    ImGui::End();
+}
+
 Application::Texture Application::load_texture(const RefPtr<Gfx::Bitmap> bitmap)
 {
     Vector<Gfx::RGBA32> pixels;
@@ -409,22 +565,13 @@ Application::Texture Application::load_texture(const RefPtr<Gfx::Bitmap> bitmap)
 
 void Application::load_all_tile_texture_sheets()
 {
-    constexpr StringView content_directory = "Content";
-    if (!Core::File::exists(content_directory) || !Core::File::is_directory(content_directory))
-    {
-        // TODO: Write a better error message and instructions on how to get the content.
-        warnln("The Content directory could not be found.");
-        warnln("It is _not_ distributed with Tadapt, as it's contents are owned be Re-Logic.");
-        VERIFY_NOT_REACHED();
-    }
-
     // TODO: Lazy tile texture loading?
     outln("Loading tile texture sheets");
-    for (u16 i = 0; i < NumericLimits<u16>::max(); i++)
+    for (u16 i = 0; i < Terraria::s_total_tiles; i++)
     {
         auto image = Gfx::load_png(String::formatted("Content/images/Tiles_{}.png", i));
         if (!image)
-            break;
+            continue;
 
         m_tile_textures.set(i, load_texture(image));
     }
@@ -436,4 +583,21 @@ void Application::load_all_tile_texture_sheets()
     m_green_wire_texture = load_texture(Gfx::load_png("Content/images/Wires3.png"));
     m_yellow_wire_texture = load_texture(Gfx::load_png("Content/images/Wires4.png"));
     m_actuator_texture = load_texture(Gfx::load_png("Content/images/Actuator.png"));
+}
+
+
+void Application::load_all_item_texture_sheets()
+{
+    // TODO: Lazy tile texture loading?
+    outln("Loading item texture sheets");
+    for (u16 i = 0; i < Terraria::s_total_items; i++)
+    {
+        auto image = Gfx::load_png(String::formatted("Content/images/Item_{}.png", i));
+        if (!image)
+            continue;
+
+        m_item_textures.set(i, load_texture(image));
+    }
+
+    outln("Loaded {} item texture sheets", m_item_textures.size());
 }
