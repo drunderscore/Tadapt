@@ -124,6 +124,7 @@ void Application::set_selected_tile(int x, int y)
         if (kv.value.position().x() == m_selected_tile_x && kv.value.position().y() == m_selected_tile_y)
         {
             m_selected_chest = &kv.value;
+            m_selected_chest->name().copy_characters_to_buffer(m_selected_chest_name, sizeof(m_selected_chest_name));
             found_chest = true;
             break;
         }
@@ -419,6 +420,10 @@ void Application::draw_selected_chest_window()
 {
     if (ImGui::Begin("Chest", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
+        if (ImGui::InputText("Name", m_selected_chest_name, sizeof(m_selected_chest_name)))
+            m_selected_chest->set_name(m_selected_chest_name);
+        ImGui::Separator();
+
         // FIXME: Can we really assume chests will always have 40 slots? The world file doesn't.
         for (auto i = 0; i < 40; i++)
         {
