@@ -28,6 +28,7 @@ Application::Application(RefPtr<Terraria::World> world)
 
     load_all_tile_texture_sheets();
     load_all_item_texture_sheets();
+    frame_implicit_tiles();
 }
 
 void Application::process_event(SDL_Event* event)
@@ -605,4 +606,31 @@ void Application::load_all_item_texture_sheets()
     }
 
     outln("Loaded {} item texture sheets", m_item_textures.size());
+}
+
+void Application::frame_implicit_tiles()
+{
+    outln("Framing the world...");
+    // TODO: Properly frame the edges of the world (starting at 1 and subtracting 1 shouldn't really happen)
+    for (auto x = 1; x < m_current_world->m_max_tiles_x - 1; x++)
+    {
+        for (auto y = 1; y < m_current_world->m_max_tiles_y - 1; y++)
+        {
+            auto& tile = m_current_world->tile_map()->at(x, y);
+            if (!tile.block().has_value())
+                continue;
+
+            auto& top = m_current_world->tile_map()->at(x, y - 1);
+            auto& bottom = m_current_world->tile_map()->at(x, y + 1);
+            auto& left = m_current_world->tile_map()->at(x - 1, y);
+            auto& right = m_current_world->tile_map()->at(x + 1, y);
+
+            auto frames = Terraria::Tile::Block::frame_for_block(tile, top, bottom, left, right);
+            if (frames.has_value())
+            {
+                tile.block()->frame_x() = frames->x;
+                tile.block()->frame_y() = frames->y;
+            }
+        }
+    }
 }

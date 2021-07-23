@@ -44,6 +44,8 @@ private:
 
     void load_all_item_texture_sheets();
 
+    void frame_implicit_tiles();
+
     HashMap<u16, Texture> m_tile_textures;
     HashMap<u16, Texture> m_item_textures;
     RefPtr<Terraria::World> m_current_world;
