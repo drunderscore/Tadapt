@@ -27,6 +27,7 @@ jobs:
     # Shamelessly stolen from Serenity
     - name: Use GCC 10 instead
       run: |
+        sudo apt install liblua5.3-dev
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 
     - name: Configure CMake
