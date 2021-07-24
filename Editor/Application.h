@@ -36,6 +36,8 @@ private:
 
     void draw_tile_map();
 
+    void draw_tiles_combo_box(const StringView& preview, Function<void(Optional<int>)> on_select);
+
     void draw_selection_window();
 
     void draw_selected_chest_window();
@@ -43,6 +45,8 @@ private:
     void load_all_tile_texture_sheets();
 
     void load_all_item_texture_sheets();
+
+    void frame_region(i16 x, i16 y, i16 end_x, i16 end_y);
 
     void frame_implicit_tiles();
 

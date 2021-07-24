@@ -314,6 +314,33 @@ void Application::draw_tile_map()
                               static_cast<float>(m_hovered_visual_tile_y)), 0xffff00ff);
 }
 
+void Application::draw_tiles_combo_box(const StringView& preview, Function<void(Optional<int>)> on_select)
+{
+    if (ImGui::BeginCombo("Blocks", preview.characters_without_null_termination()))
+    {
+        if (ImGui::Selectable("None"))
+            on_select({});
+
+        for (auto& tex_for_blocks_combo : m_tile_textures)
+        {
+            ImGui::Image(reinterpret_cast<void*>(tex_for_blocks_combo.value.gl_texture_id), ImVec2(16, 16),
+                         ImVec2(0.0f, 0.0f),
+                         ImVec2(16.0f / (float) tex_for_blocks_combo.value.width,
+                                16.0f / (float) tex_for_blocks_combo.value.height));
+            ImGui::SameLine();
+            // FIXME: string allocation each time?? wtf, can't we just get the char* with a null term?
+            if (ImGui::Selectable(String::formatted("{}",
+                                                    Terraria::s_tiles[tex_for_blocks_combo.key].internal_name).characters()))
+            {
+                on_select(tex_for_blocks_combo.key);
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+}
+
 void Application::draw_selection_window()
 {
     if (ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
@@ -357,28 +384,13 @@ void Application::draw_selection_window()
                                                 Terraria::s_tiles[static_cast<int>(tile.block()->id())].internal_name)
                                                        : String::empty();
 
-        if (ImGui::BeginCombo("Blocks", preview_string.characters()))
+        draw_tiles_combo_box(preview_string, [&tile](auto id)
         {
-            if (ImGui::Selectable("None"))
+            if (!id.has_value())
                 tile.block() = {};
-
-            for (auto& tex_for_blocks_combo : m_tile_textures)
-            {
-                ImGui::Image(reinterpret_cast<void*>(tex_for_blocks_combo.value.gl_texture_id), ImVec2(16, 16),
-                             ImVec2(0.0f, 0.0f),
-                             ImVec2(16.0f / (float) tex_for_blocks_combo.value.width,
-                                    16.0f / (float) tex_for_blocks_combo.value.height));
-                ImGui::SameLine();
-                // FIXME: string allocation each time?? wtf, can't we just get the char* with a null term?
-                if (ImGui::Selectable(String::formatted("{}",
-                                                        Terraria::s_tiles[tex_for_blocks_combo.key].internal_name).characters()))
-                {
-                    tile.block() = static_cast<Terraria::Tile::Block::Id>(tex_for_blocks_combo.key);
-                }
-            }
-
-            ImGui::EndCombo();
-        }
+            else
+                tile.block() = static_cast<Terraria::Tile::Block::Id>(*id);
+        });
 
         if (tile.block().has_value() && Terraria::s_tiles[static_cast<int>(tile.block()->id())].frame_important)
         {
@@ -608,13 +620,11 @@ void Application::load_all_item_texture_sheets()
     outln("Loaded {} item texture sheets", m_item_textures.size());
 }
 
-void Application::frame_implicit_tiles()
+void Application::frame_region(i16 start_x, i16 start_y, i16 end_x, i16 end_y)
 {
-    outln("Framing the world...");
-    // TODO: Properly frame the edges of the world (starting at 1 and subtracting 1 shouldn't really happen)
-    for (auto x = 1; x < m_current_world->m_max_tiles_x - 1; x++)
+    for (i16 x = start_x; x < end_x; x++)
     {
-        for (auto y = 1; y < m_current_world->m_max_tiles_y - 1; y++)
+        for (i16 y = start_y; y < end_y; y++)
         {
             auto& tile = m_current_world->tile_map()->at(x, y);
             if (!tile.block().has_value())
@@ -633,4 +643,11 @@ void Application::frame_implicit_tiles()
             }
         }
     }
+}
+
+void Application::frame_implicit_tiles()
+{
+    outln("Framing the world...");
+    // TODO: Properly frame the edges of the world (starting at 1 and subtracting 1 shouldn't really happen)
+    frame_region(1, 1, m_current_world->m_max_tiles_x - 1, m_current_world->m_max_tiles_y - 1);
 }
