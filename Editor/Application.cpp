@@ -470,13 +470,7 @@ void Application::draw_selected_chest_window()
                     if (hovered)
                         ImGui::SetTooltip("%s", Terraria::s_items[id - 1].english_name.to_string().characters());
 
-                    auto maybe_tex = m_item_textures.get(id);
-                    if (!maybe_tex.has_value())
-                    {
-                        warnln("Woah, we're missing texture for item id {}", id);
-                        VERIFY_NOT_REACHED();
-                    }
-                    auto tex = *maybe_tex;
+                    auto tex = *m_item_textures.get(id);
                     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - tex.width) * 0.5f);
                     ImGui::SetCursorPosY((ImGui::GetWindowHeight() - tex.height) * 0.5f);
                     ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(tex.width, tex.height));
