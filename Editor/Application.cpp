@@ -459,7 +459,6 @@ void Application::draw_selected_chest_window()
                     if (maybe_item.has_value())
                     {
                         m_selected_chest_selected_item_stack = maybe_item->stack();
-                        m_selected_chest_selected_item_prefix = static_cast<u8>(maybe_item->prefix());
                     }
                     ImGui::OpenPopup("ModifyChestItem");
                 }
@@ -504,7 +503,6 @@ void Application::draw_selected_chest_window()
                                     item.set_stack(1);
                                     maybe_item = move(item);
                                     m_selected_chest_selected_item_stack = 1;
-                                    m_selected_chest_selected_item_prefix = 0;
                                 }
 
                                 maybe_item->set_id(static_cast<Terraria::Item::Id>(tex_for_items_combo.key));
