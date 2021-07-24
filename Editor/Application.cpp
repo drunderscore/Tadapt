@@ -63,9 +63,13 @@ void Application::process_event(SDL_Event* event)
                             for (auto y = 0; y < m_selected_object->height(); y++)
                             {
                                 auto tile = m_selected_object->tiles().at(m_selected_object->index_for_position(x, y));
-                                if (m_selected_object->style_offset().has_value())
+                                if (m_selected_object->style_offset_x().has_value())
                                     *tile.block()->frame_x() +=
-                                            *m_selected_object->style_offset() * m_selected_object_style;
+                                            *m_selected_object->style_offset_x() * m_selected_object_style;
+
+                                if (m_selected_object->style_offset_y().has_value())
+                                    *tile.block()->frame_y() +=
+                                            *m_selected_object->style_offset_y() * m_selected_object_style;
                                 m_current_world->tile_map()->at(clicked_tile_x + x + 1, clicked_tile_y + y + 1) = move(
                                         tile);
                             }
@@ -214,7 +218,8 @@ void Application::draw_main_menu_bar()
                         ImGui::EndCombo();
                     }
 
-                    if (m_selected_object->style_offset().has_value())
+                    if (m_selected_object->style_offset_x().has_value() ||
+                        m_selected_object->style_offset_y().has_value())
                     {
                         ImGui::InputInt("Style", &m_selected_object_style);
                     }
@@ -391,9 +396,14 @@ void Application::draw_tile_map()
                 if (tile.block()->frame_y().has_value())
                     frame_y = *tile.block()->frame_y();
 
-                if (m_selected_object->style_offset().has_value())
+                if (m_selected_object->style_offset_x().has_value())
                 {
-                    frame_x += (*m_selected_object->style_offset() * m_selected_object_style);
+                    frame_x += (*m_selected_object->style_offset_x() * m_selected_object_style);
+                }
+
+                if (m_selected_object->style_offset_y().has_value())
+                {
+                    frame_y += (*m_selected_object->style_offset_y() * m_selected_object_style);
                 }
 
                 draw_list->AddImage(reinterpret_cast<void*>(tex.gl_texture_id),
