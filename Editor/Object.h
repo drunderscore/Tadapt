@@ -15,8 +15,7 @@
 class Object
 {
 public:
-    Object(String name, u8 width, u8 height, Vector<Terraria::Tile> tiles, Optional<int> style_offset_x = {},
-           Optional<int> style_offset_y = {});
+    Object(String name, u8 width, u8 height, Vector<Terraria::Tile> tiles, Optional<int> style_offset = {});
 
     static const Vector<Object>& all_objects()
     { return s_all_objects; }
@@ -47,7 +46,6 @@ private:
     String m_name;
     u8 m_width;
     u8 m_height;
-    Optional<int> m_style_offset_x;
-    Optional<int> m_style_offset_y;
+    Optional<int> m_style_offset;
     Vector<Terraria::Tile> m_tiles;
 };
