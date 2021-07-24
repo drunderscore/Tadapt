@@ -65,11 +65,11 @@ void Application::process_event(SDL_Event* event)
                                 auto tile = m_selected_object->tiles().at(m_selected_object->index_for_position(x, y));
                                 if (m_selected_object->style_offset_x().has_value())
                                     *tile.block()->frame_x() +=
-                                            *m_selected_object->style_offset_x() * m_selected_object_style;
+                                            *m_selected_object->style_offset_x() * m_selected_object_style_x;
 
                                 if (m_selected_object->style_offset_y().has_value())
                                     *tile.block()->frame_y() +=
-                                            *m_selected_object->style_offset_y() * m_selected_object_style;
+                                            *m_selected_object->style_offset_y() * m_selected_object_style_y;
                                 m_current_world->tile_map()->at(clicked_tile_x + x + 1, clicked_tile_y + y + 1) = move(
                                         tile);
                             }
@@ -212,7 +212,7 @@ void Application::draw_main_menu_bar()
                             if (ImGui::Selectable(object.name().characters()))
                             {
                                 m_selected_object = &object;
-                                m_selected_object_style = 0;
+                                m_selected_object_style_x = m_selected_object_style_y = 0;
                             }
                         }
                         ImGui::EndCombo();
@@ -221,7 +221,16 @@ void Application::draw_main_menu_bar()
                     if (m_selected_object->style_offset_x().has_value() ||
                         m_selected_object->style_offset_y().has_value())
                     {
-                        ImGui::InputInt("Style", &m_selected_object_style);
+                        if (m_selected_object->is_individually_styled())
+                        {
+                            ImGui::InputInt("Style X", &m_selected_object_style_x);
+                            ImGui::InputInt("Style Y", &m_selected_object_style_y);
+                        }
+                        else
+                        {
+                            if (ImGui::InputInt("Style", &m_selected_object_style_x))
+                                m_selected_object_style_y = m_selected_object_style_x;
+                        }
                     }
                     break;
                 default:
@@ -398,12 +407,12 @@ void Application::draw_tile_map()
 
                 if (m_selected_object->style_offset_x().has_value())
                 {
-                    frame_x += (*m_selected_object->style_offset_x() * m_selected_object_style);
+                    frame_x += (*m_selected_object->style_offset_x() * m_selected_object_style_x);
                 }
 
                 if (m_selected_object->style_offset_y().has_value())
                 {
-                    frame_y += (*m_selected_object->style_offset_y() * m_selected_object_style);
+                    frame_y += (*m_selected_object->style_offset_y() * m_selected_object_style_y);
                 }
 
                 draw_list->AddImage(reinterpret_cast<void*>(tex.gl_texture_id),

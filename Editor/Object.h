@@ -16,7 +16,7 @@ class Object
 {
 public:
     Object(String name, u8 width, u8 height, Vector<Terraria::Tile> tiles, Optional<int> style_offset_x = {},
-           Optional<int> style_offset_y = {});
+           Optional<int> style_offset_y = {}, bool individual_styling = false);
 
     static const Vector<Object>& all_objects()
     { return s_all_objects; }
@@ -36,6 +36,9 @@ public:
     const Optional<int>& style_offset_y() const
     { return m_style_offset_y; }
 
+    bool is_individually_styled() const
+    { return m_individual_styling; }
+
     const Vector<Terraria::Tile>& tiles() const
     { return m_tiles; }
 
@@ -52,5 +55,6 @@ private:
     u8 m_height;
     Optional<int> m_style_offset_x;
     Optional<int> m_style_offset_y;
+    bool m_individual_styling{};
     Vector<Terraria::Tile> m_tiles;
 };

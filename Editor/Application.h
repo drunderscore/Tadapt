@@ -80,7 +80,8 @@ private:
     int m_selected_frame_y{};
 
     const Object* m_selected_object{};
-    int m_selected_object_style{};
+    int m_selected_object_style_x{};
+    int m_selected_object_style_y{};
 
     Terraria::Chest* m_selected_chest{};
     char m_selected_chest_name[20]{};
