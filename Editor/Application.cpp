@@ -14,6 +14,8 @@
 #include <LibTerraria/World.h>
 #include <LibTerraria/Model.h>
 
+static const char* s_tool_names[] = {"Select", "Place Object"};
+
 Application::Application(RefPtr<Terraria::World> world)
         : m_current_world(world)
 {
@@ -29,6 +31,8 @@ Application::Application(RefPtr<Terraria::World> world)
     load_all_tile_texture_sheets();
     load_all_item_texture_sheets();
     frame_implicit_tiles();
+
+    m_selected_object = &Object::all_objects().at(0);
 }
 
 void Application::process_event(SDL_Event* event)
@@ -45,8 +49,35 @@ void Application::process_event(SDL_Event* event)
         {
             if (event->button.button == SDL_BUTTON_LEFT)
             {
-                set_selected_tile((m_hovered_visual_tile_x / m_tile_visual_size_x) + m_offset_x - 1,
-                                  (m_hovered_visual_tile_y / m_tile_visual_size_y) + m_offset_y - 1);
+                auto clicked_tile_x = (m_hovered_visual_tile_x / m_tile_visual_size_x) + m_offset_x - 1;
+                auto clicked_tile_y = (m_hovered_visual_tile_y / m_tile_visual_size_y) + m_offset_y - 1;
+
+                switch (m_current_tool)
+                {
+                    case Tool::Select:
+                        set_selected_tile(clicked_tile_x, clicked_tile_y);
+                        break;
+                    case Tool::PlaceObject:
+                        for (auto x = 0; x < m_selected_object->width(); x++)
+                        {
+                            for (auto y = 0; y < m_selected_object->height(); y++)
+                            {
+                                auto tile = m_selected_object->tiles().at(m_selected_object->index_for_position(x, y));
+                                if (m_selected_object->style_offset().has_value())
+                                    *tile.block()->frame_x() +=
+                                            *m_selected_object->style_offset() * m_selected_object_style;
+                                m_current_world->tile_map()->at(clicked_tile_x + x + 1, clicked_tile_y + y + 1) = move(
+                                        tile);
+                            }
+                        }
+
+                        auto start_frame_x = clicked_tile_x - 2;
+                        auto start_frame_y = clicked_tile_y - 2;
+
+                        frame_region(start_frame_x, start_frame_y, clicked_tile_x + m_selected_object->width() + 2,
+                                     clicked_tile_y + m_selected_object->height() + 2);
+                        break;
+                }
             }
         }
     }
@@ -157,6 +188,40 @@ void Application::draw_main_menu_bar()
             ImGui::DragInt("Tile X Visual Size", &m_tile_visual_size_x);
             ImGui::DragInt("Tile Y Visual Size", &m_tile_visual_size_y);
             // TODO: Customizable wire alpha
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Tool"))
+        {
+            ImGui::Combo("Current Tool", reinterpret_cast<int*>(&m_current_tool),
+                         s_tool_names, IM_ARRAYSIZE(s_tool_names));
+
+            switch (m_current_tool)
+            {
+                case Tool::PlaceObject:
+                    ImGui::Separator();
+                    if (ImGui::BeginCombo("Objects", m_selected_object->name().characters()))
+                    {
+                        for (auto& object : Object::all_objects())
+                        {
+                            if (ImGui::Selectable(object.name().characters()))
+                            {
+                                m_selected_object = &object;
+                                m_selected_object_style = 0;
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+
+                    if (m_selected_object->style_offset().has_value())
+                    {
+                        ImGui::InputInt("Style", &m_selected_object_style);
+                    }
+                    break;
+                default:
+                    break;
+            }
 
             ImGui::EndMenu();
         }
@@ -308,10 +373,49 @@ void Application::draw_tile_map()
         }
     }
 
-    draw_list->AddRect(ImVec2(static_cast<float>(m_hovered_visual_tile_x) - static_cast<float>(m_tile_visual_size_x),
-                              static_cast<float>(m_hovered_visual_tile_y) - static_cast<float>(m_tile_visual_size_y)),
-                       ImVec2(static_cast<float>(m_hovered_visual_tile_x),
-                              static_cast<float>(m_hovered_visual_tile_y)), 0xffff00ff);
+    if (m_current_tool == Tool::PlaceObject)
+    {
+        for (auto x = 0; x < m_selected_object->width(); x++)
+        {
+            for (auto y = 0; y < m_selected_object->height(); y++)
+            {
+                auto& tile = m_selected_object->tiles().at(m_selected_object->index_for_position(x, y));
+                auto tex = *m_tile_textures.get(static_cast<int>(tile.block()->id()));
+
+                short frame_x = 0;
+                short frame_y = 0;
+
+                if (tile.block()->frame_x().has_value())
+                    frame_x = *tile.block()->frame_x();
+
+                if (tile.block()->frame_y().has_value())
+                    frame_y = *tile.block()->frame_y();
+
+                if (m_selected_object->style_offset().has_value())
+                {
+                    frame_x += (*m_selected_object->style_offset() * m_selected_object_style);
+                }
+
+                draw_list->AddImage(reinterpret_cast<void*>(tex.gl_texture_id),
+                                    ImVec2((x * m_tile_visual_size_x) + m_hovered_visual_tile_x,
+                                           (y * m_tile_visual_size_y) + m_hovered_visual_tile_y),
+                                    ImVec2(((x + 1.0f) * m_tile_visual_size_x + m_hovered_visual_tile_x),
+                                           ((y + 1.0f) * m_tile_visual_size_y) + m_hovered_visual_tile_y),
+                                    ImVec2((float) frame_x / (float) tex.width,
+                                           (float) frame_y / (float) tex.height),
+                                    ImVec2(((float) frame_x + 16.0f) / (float) tex.width,
+                                           ((float) frame_y + 16.0f) / (float) tex.height), 0x5fffffff);
+            }
+        }
+    }
+    else
+    {
+        draw_list->AddRect(
+                ImVec2(static_cast<float>(m_hovered_visual_tile_x) - static_cast<float>(m_tile_visual_size_x),
+                       static_cast<float>(m_hovered_visual_tile_y) - static_cast<float>(m_tile_visual_size_y)),
+                ImVec2(static_cast<float>(m_hovered_visual_tile_x),
+                       static_cast<float>(m_hovered_visual_tile_y)), 0xffff00ff);
+    }
 }
 
 void Application::draw_tiles_combo_box(const StringView& preview, Function<void(Optional<int>)> on_select)

@@ -10,6 +10,7 @@
 #include <LibTerraria/World.h>
 #include <SDL2/SDL_events.h>
 #include <LibGfx/Bitmap.h>
+#include <Editor/Object.h>
 
 class Application
 {
@@ -23,6 +24,11 @@ public:
     void set_selected_tile(int x, int y);
 
 private:
+    enum class Tool
+    {
+        Select,
+        PlaceObject
+    };
     struct Texture
     {
         u32 gl_texture_id;
@@ -50,6 +56,8 @@ private:
 
     void frame_implicit_tiles();
 
+    Tool m_current_tool{};
+
     HashMap<u16, Texture> m_tile_textures;
     HashMap<u16, Texture> m_item_textures;
     RefPtr<Terraria::World> m_current_world;
@@ -70,6 +78,9 @@ private:
 
     int m_selected_frame_x{};
     int m_selected_frame_y{};
+
+    const Object* m_selected_object{};
+    int m_selected_object_style{};
 
     Terraria::Chest* m_selected_chest{};
     char m_selected_chest_name[20]{};

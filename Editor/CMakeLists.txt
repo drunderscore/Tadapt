@@ -8,6 +8,7 @@ add_executable(Editor
         ${PROJECT_SOURCE_DIR}/imgui/backends/imgui_impl_opengl3.cpp
         main.cpp
         Application.cpp
+        Object.cpp
         )
 # FIXME: This is copied from target_lagom, because the PROJECT_ variables don't work exactly how we want outside that project.
 target_include_directories(Editor SYSTEM PRIVATE
