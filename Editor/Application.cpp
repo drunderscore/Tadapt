@@ -522,11 +522,30 @@ void Application::draw_selected_chest_window()
                             maybe_item->set_stack(m_selected_chest_selected_item_stack);
                             m_selected_chest->contents().set(i, *maybe_item);
                         }
-                        if (ImGui::InputScalar("Prefix", ImGuiDataType_U8, &m_selected_chest_selected_item_prefix))
+
+                        auto preview_prefix =
+                                maybe_item.has_value() && maybe_item->prefix() != Terraria::Item::Prefix::None
+                                ? String::formatted("{}", Terraria::s_prefixes[
+                                        static_cast<int>(maybe_item->prefix()) - 1].english_name) : "None";
+
+                        if (ImGui::BeginCombo("Prefix", preview_prefix.characters()))
                         {
-                            maybe_item->set_prefix(
-                                    static_cast<Terraria::Item::Prefix>(m_selected_chest_selected_item_prefix));
-                            m_selected_chest->contents().set(i, *maybe_item);
+                            if (ImGui::Selectable("None"))
+                            {
+                                maybe_item->set_prefix(Terraria::Item::Prefix::None);
+                                m_selected_chest->contents().set(i, *maybe_item);
+                            }
+
+                            for (auto j = 0; j < Terraria::s_total_prefixes; j++)
+                            {
+                                if (ImGui::Selectable(
+                                        Terraria::s_prefixes[j].english_name.characters_without_null_termination()))
+                                {
+                                    maybe_item->set_prefix(static_cast<Terraria::Item::Prefix>(j + 1));
+                                    m_selected_chest->contents().set(i, *maybe_item);
+                                }
+                            }
+                            ImGui::EndCombo();
                         }
                     }
                     ImGui::EndPopup();

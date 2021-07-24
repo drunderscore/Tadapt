@@ -74,7 +74,6 @@ private:
     Terraria::Chest* m_selected_chest{};
     char m_selected_chest_name[20]{};
     i16 m_selected_chest_selected_item_stack{};
-    u8 m_selected_chest_selected_item_prefix{};
 
     bool m_selected_has_red_wire{};
     bool m_selected_has_blue_wire{};
