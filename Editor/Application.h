@@ -48,6 +48,8 @@ private:
 
     void draw_selected_chest_window();
 
+    void draw_selected_sign_window();
+
     void load_all_tile_texture_sheets();
 
     void load_all_item_texture_sheets();
@@ -86,6 +88,9 @@ private:
     Terraria::Chest* m_selected_chest{};
     char m_selected_chest_name[20]{};
     i16 m_selected_chest_selected_item_stack{};
+
+    Terraria::Sign* m_selected_sign{};
+    char m_selected_sign_text[512]{};
 
     bool m_selected_has_red_wire{};
     bool m_selected_has_blue_wire{};

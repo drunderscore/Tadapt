@@ -130,6 +130,9 @@ void Application::draw()
 
     if (m_selected_chest)
         draw_selected_chest_window();
+
+    if (m_selected_sign)
+        draw_selected_sign_window();
 }
 
 void Application::set_selected_tile(int x, int y)
@@ -168,6 +171,21 @@ void Application::set_selected_tile(int x, int y)
 
     if (!found_chest)
         m_selected_chest = nullptr;
+
+    bool found_sign;
+    for (auto& kv : m_current_world->signs())
+    {
+        if (kv.value.position().x() == m_selected_tile_x && kv.value.position().y() == m_selected_tile_y)
+        {
+            m_selected_sign = &kv.value;
+            m_selected_sign->text().copy_characters_to_buffer(m_selected_sign_text, sizeof(m_selected_sign_text));
+            found_sign = true;
+            break;
+        }
+    }
+
+    if (!found_sign)
+        m_selected_sign = nullptr;
 }
 
 void Application::draw_main_menu_bar()
@@ -682,6 +700,17 @@ void Application::draw_selected_chest_window()
             if ((i + 1) % 10 != 0)
                 ImGui::SameLine();
         }
+    }
+
+    ImGui::End();
+}
+
+void Application::draw_selected_sign_window()
+{
+    if (ImGui::Begin("Sign", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        if (ImGui::InputTextMultiline("Text", m_selected_sign_text, sizeof(m_selected_sign_text), ImVec2(400, 100)))
+            m_selected_sign->set_text(m_selected_sign_text);
     }
 
     ImGui::End();
