@@ -46,7 +46,7 @@ Object::Object(String name, u8 width, u8 height, Terraria::Tile::Block::Id id, O
 static Object life_crystal("Life Crystal", 2, 2, Terraria::Tile::Block::Id::Heart);
 static Object work_bench("Work Bench", 2, 1, Terraria::Tile::Block::Id::WorkBenches, 18 * 2);
 static Object pot("Pot", 2, 2, Terraria::Tile::Block::Id::Pots, 18 * 2, 18 * 2);
-static Object bed("Bed", 4, 2, Terraria::Tile::Block::Id::Beds, 18 * 4, 18 * 4, true);
+static Object bed("Bed", 4, 2, Terraria::Tile::Block::Id::Beds, 18 * 4, 18 * 2, true);
 static Object campfire("Campfire", 3, 2, Terraria::Tile::Block::Id::Campfire, 18 * 3);
 static Object anvil("Anvil", 2, 1, Terraria::Tile::Block::Id::Anvils, 18 * 2);
 static Object furnace("Furnace", 3, 2, Terraria::Tile::Block::Id::Furnaces);
