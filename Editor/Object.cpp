@@ -21,38 +21,32 @@ Object::Object(String name, u8 width, u8 height, Vector<Terraria::Tile> tiles, O
     s_all_objects.append(*this);
 }
 
-// @formatter:off
-static Object life_crystal("Life Crystal", 2, 2,
-{{
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Heart)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Heart, 18, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Heart, 0, 18)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Heart, 18, 18))
-}});
+Object::Object(String name, u8 width, u8 height, Terraria::Tile::Block::Id id, Optional<int> style_offset_x,
+               Optional<int> style_offset_y,
+               bool individual_styling)
+        : m_name(move(name)),
+          m_width(width),
+          m_height(height),
+          m_style_offset_x(move(style_offset_x)),
+          m_style_offset_y(move(style_offset_y)),
+          m_individual_styling(individual_styling)
+{
+    for (auto y = 0; y < m_height; y++)
+    {
+        for (auto x = 0; x < m_width; x++)
+        {
+            Terraria::Tile tile(Terraria::Tile::Block(id, 18 * x, 18 * y));
+            m_tiles.append(move(tile));
+        }
+    }
 
-static Object work_bench("Work Bench", 2, 1,
-{{
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::WorkBenches, 0, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::WorkBenches, 18, 0)),
-}}, 18 * 2);
+    s_all_objects.append(*this);
+}
 
-static Object pot("Pot", 2, 2,
-{{
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Pots, 0, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Pots, 18, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Pots, 0, 18)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Pots, 18, 18))
-}}, 18 * 2, 18 * 2);
-
-static Object bed("Bed", 4, 2,
-{{
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 0, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18 * 2, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18 * 3, 0)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 0, 18)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18, 18)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18 * 2, 18)),
-    Terraria::Tile(Terraria::Tile::Block(Terraria::Tile::Block::Id::Beds, 18 * 3, 18)),
-}}, 18 * 4, 18 * 4, true);
-// @formatter:on
+static Object life_crystal("Life Crystal", 2, 2, Terraria::Tile::Block::Id::Heart);
+static Object work_bench("Work Bench", 2, 1, Terraria::Tile::Block::Id::WorkBenches, 18 * 2);
+static Object pot("Pot", 2, 2, Terraria::Tile::Block::Id::Pots, 18 * 2, 18 * 2);
+static Object bed("Bed", 4, 2, Terraria::Tile::Block::Id::Beds, 18 * 4, 18 * 4, true);
+static Object campfire("Campfire", 3, 2, Terraria::Tile::Block::Id::Campfire, 18 * 3);
+static Object anvil("Anvil", 2, 1, Terraria::Tile::Block::Id::Anvils, 18 * 2);
+static Object furnace("Furnace", 3, 2, Terraria::Tile::Block::Id::Furnaces);

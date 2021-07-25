@@ -15,6 +15,9 @@
 class Object
 {
 public:
+    Object(String name, u8 width, u8 height, Terraria::Tile::Block::Id, Optional<int> style_offset_x = {},
+           Optional<int> style_offset_y = {}, bool individual_styling = false);
+
     Object(String name, u8 width, u8 height, Vector<Terraria::Tile> tiles, Optional<int> style_offset_x = {},
            Optional<int> style_offset_y = {}, bool individual_styling = false);
 
