@@ -49,4 +49,6 @@ static Object pot("Pot", 2, 2, Terraria::Tile::Block::Id::Pots, 18 * 2, 18 * 2);
 static Object bed("Bed", 4, 2, Terraria::Tile::Block::Id::Beds, 18 * 4, 18 * 2, true);
 static Object campfire("Campfire", 3, 2, Terraria::Tile::Block::Id::Campfire, 18 * 3);
 static Object anvil("Anvil", 2, 1, Terraria::Tile::Block::Id::Anvils, 18 * 2);
+static Object myhril_anvil("Mythril Anvil", 2, 1, Terraria::Tile::Block::Id::MythrilAnvil, 18 * 2);
 static Object furnace("Furnace", 3, 2, Terraria::Tile::Block::Id::Furnaces);
+static Object alchemy_table("Alchemy Table", 3, 3, Terraria::Tile::Block::Id::AlchemyTable);
