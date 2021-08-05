@@ -27,7 +27,8 @@ private:
     enum class Tool
     {
         Select,
-        PlaceObject
+        PlaceObject,
+        Paint
     };
     struct Texture
     {
@@ -36,6 +37,8 @@ private:
         int height;
     };
 
+    void paint_tile(u16 x, u16 y);
+
     static Texture load_texture(const RefPtr<Gfx::Bitmap>&);
 
     void draw_main_menu_bar();
@@ -43,6 +46,8 @@ private:
     void draw_tile_map();
 
     void draw_tiles_combo_box(const StringView& preview, Function<void(Optional<int>)> on_select);
+
+    void draw_tile_properties(Terraria::Tile&);
 
     void draw_selection_window();
 
@@ -89,13 +94,16 @@ private:
     char m_selected_chest_name[20]{};
     i16 m_selected_chest_selected_item_stack{};
 
+    Terraria::Tile m_tile_to_paint;
+    bool m_paint_allow_drag{};
+
     Terraria::Sign* m_selected_sign{};
     char m_selected_sign_text[512]{};
 
-    bool m_selected_has_red_wire{};
-    bool m_selected_has_blue_wire{};
-    bool m_selected_has_green_wire{};
-    bool m_selected_has_yellow_wire{};
-    bool m_selected_has_actuator{};
-    bool m_selected_is_actuated{};
+    bool m_tile_properties_has_red_wire{};
+    bool m_tile_properties_has_blue_wire{};
+    bool m_tile_properties_has_green_wire{};
+    bool m_tile_properties_has_yellow_wire{};
+    bool m_tile_properties_has_actuator{};
+    bool m_tile_properties_is_actuated{};
 };

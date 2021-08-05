@@ -52,3 +52,5 @@ static Object anvil("Anvil", 2, 1, Terraria::Tile::Block::Id::Anvils, 18 * 2);
 static Object myhril_anvil("Mythril Anvil", 2, 1, Terraria::Tile::Block::Id::MythrilAnvil, 18 * 2);
 static Object furnace("Furnace", 3, 2, Terraria::Tile::Block::Id::Furnaces);
 static Object alchemy_table("Alchemy Table", 3, 3, Terraria::Tile::Block::Id::AlchemyTable);
+static Object statues("Statues", 2, 3, Terraria::Tile::Block::Id::Statues, 18 * 2, 18 * 3, true);
+static Object alphabet_statues("Alphabet Statues", 2, 3, Terraria::Tile::Block::Id::AlphabetStatues, 18 * 2);

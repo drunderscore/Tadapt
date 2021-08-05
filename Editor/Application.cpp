@@ -14,7 +14,7 @@
 #include <LibTerraria/World.h>
 #include <LibTerraria/Model.h>
 
-static const char* s_tool_names[] = {"Select", "Place Object"};
+static const char* s_tool_names[] = {"Select", "Place Object", "Paint"};
 
 Application::Application(RefPtr<Terraria::World> world)
         : m_current_world(world)
@@ -39,8 +39,26 @@ void Application::process_event(SDL_Event* event)
 {
     if (event->type == SDL_MOUSEMOTION)
     {
+        auto last_hovered_x = m_hovered_visual_tile_x;
+        auto last_hovered_y = m_hovered_visual_tile_y;
         m_hovered_visual_tile_x = ((event->motion.x - 1) | (m_tile_visual_size_x - 1)) + 1;
         m_hovered_visual_tile_y = ((event->motion.y - 1) | (m_tile_visual_size_y - 1)) + 1;
+
+        if (last_hovered_x != m_hovered_visual_tile_x || last_hovered_y != m_hovered_visual_tile_y)
+        {
+            if (m_paint_allow_drag)
+            {
+                if ((SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0)
+                {
+                    if (m_current_tool == Tool::Paint)
+                    {
+                        auto clicked_tile_x = (m_hovered_visual_tile_x / m_tile_visual_size_x) + m_offset_x - 1;
+                        auto clicked_tile_y = (m_hovered_visual_tile_y / m_tile_visual_size_y) + m_offset_y - 1;
+                        paint_tile(clicked_tile_x, clicked_tile_y);
+                    }
+                }
+            }
+        }
     }
     else if (event->type == SDL_MOUSEBUTTONDOWN)
     {
@@ -58,6 +76,7 @@ void Application::process_event(SDL_Event* event)
                         set_selected_tile(clicked_tile_x, clicked_tile_y);
                         break;
                     case Tool::PlaceObject:
+                    {
                         for (auto x = 0; x < m_selected_object->width(); x++)
                         {
                             for (auto y = 0; y < m_selected_object->height(); y++)
@@ -80,6 +99,10 @@ void Application::process_event(SDL_Event* event)
 
                         frame_region(start_frame_x, start_frame_y, clicked_tile_x + m_selected_object->width() + 2,
                                      clicked_tile_y + m_selected_object->height() + 2);
+                        break;
+                    }
+                    case Tool::Paint:
+                        paint_tile(clicked_tile_x, clicked_tile_y);
                         break;
                 }
             }
@@ -118,6 +141,12 @@ void Application::process_event(SDL_Event* event)
     }
 }
 
+void Application::paint_tile(u16 x, u16 y)
+{
+    m_current_world->tile_map()->at(x, y) = m_tile_to_paint;
+    frame_region(x - 2, y - 2, x + 2, y + 2);
+}
+
 void Application::draw()
 {
     draw_main_menu_bar();
@@ -141,12 +170,12 @@ void Application::set_selected_tile(int x, int y)
     m_selected_tile_y = y;
 
     auto& tile = m_current_world->tile_map()->at(x, y);
-    m_selected_has_red_wire = tile.has_red_wire();
-    m_selected_has_blue_wire = tile.has_blue_wire();
-    m_selected_has_green_wire = tile.has_green_wire();
-    m_selected_has_yellow_wire = tile.has_yellow_wire();
-    m_selected_has_actuator = tile.has_actuator();
-    m_selected_is_actuated = tile.is_actuated();
+    m_tile_properties_has_red_wire = tile.has_red_wire();
+    m_tile_properties_has_blue_wire = tile.has_blue_wire();
+    m_tile_properties_has_green_wire = tile.has_green_wire();
+    m_tile_properties_has_yellow_wire = tile.has_yellow_wire();
+    m_tile_properties_has_actuator = tile.has_actuator();
+    m_tile_properties_is_actuated = tile.is_actuated();
 
     if (tile.block().has_value())
     {
@@ -251,6 +280,13 @@ void Application::draw_main_menu_bar()
                         }
                     }
                     break;
+                case Tool::Paint:
+                {
+                    draw_tile_properties(m_tile_to_paint);
+                    ImGui::Separator();
+                    ImGui::Checkbox("Allow Dragging", &m_paint_allow_drag);
+                    break;
+                }
                 default:
                     break;
             }
@@ -482,89 +518,94 @@ void Application::draw_tiles_combo_box(const StringView& preview, Function<void(
 
 }
 
+void Application::draw_tile_properties(Terraria::Tile& tile)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    if (ImGui::BeginChild("Selection Image", ImVec2(64, 64), true,
+                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+    {
+        ImGui::PopStyleVar();
+        if (tile.block().has_value())
+        {
+            short frame_x = 0;
+            short frame_y = 0;
+
+            if (tile.block()->frame_x().has_value())
+                frame_x = *tile.block()->frame_x();
+
+            if (tile.block()->frame_y().has_value())
+                frame_y = *tile.block()->frame_y();
+
+            auto tex = *m_tile_textures.get(static_cast<u16>(tile.block()->id()));
+
+            ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(64, 64),
+                         ImVec2((float) frame_x / (float) tex.width,
+                                (float) frame_y / (float) tex.height),
+                         ImVec2(((float) frame_x + 16.0f) / (float) tex.width,
+                                ((float) frame_y + 16.0f) / (float) tex.height));
+            ImGui::Separator();
+        }
+    }
+    else
+    {
+        ImGui::PopStyleVar();
+    }
+
+    ImGui::EndChild();
+
+    auto preview_string = tile.block().has_value() ?
+                          String::formatted("{}",
+                                            Terraria::s_tiles[static_cast<int>(tile.block()->id())].internal_name)
+                                                   : String::empty();
+
+    draw_tiles_combo_box(preview_string, [&tile](auto id)
+    {
+        if (!id.has_value())
+            tile.block() = {};
+        else
+            tile.block() = static_cast<Terraria::Tile::Block::Id>(*id);
+    });
+
+    if (tile.block().has_value() && Terraria::s_tiles[static_cast<int>(tile.block()->id())].frame_important)
+    {
+        ImGui::SetNextItemWidth(75.0f);
+        if (ImGui::InputInt("Frame X", &m_selected_frame_x, 18, 18) && tile.block().has_value())
+            tile.block()->frame_x() = m_selected_frame_x;
+
+        ImGui::SameLine();
+
+        ImGui::SetNextItemWidth(75.0f);
+        if (ImGui::InputInt("Frame Y", &m_selected_frame_y, 18, 18) && tile.block().has_value())
+            tile.block()->frame_y() = m_selected_frame_y;
+
+        ImGui::Separator();
+    }
+
+    if (ImGui::Checkbox("Red Wire", &m_tile_properties_has_red_wire))
+        tile.set_red_wire(m_tile_properties_has_red_wire);
+
+    if (ImGui::Checkbox("Green Wire", &m_tile_properties_has_green_wire))
+        tile.set_green_wire(m_tile_properties_has_green_wire);
+
+    if (ImGui::Checkbox("Blue Wire", &m_tile_properties_has_blue_wire))
+        tile.set_blue_wire(m_tile_properties_has_blue_wire);
+
+    if (ImGui::Checkbox("Yellow Wire", &m_tile_properties_has_yellow_wire))
+        tile.set_yellow_wire(m_tile_properties_has_yellow_wire);
+
+    if (ImGui::Checkbox("Actuator", &m_tile_properties_has_actuator))
+        tile.set_has_actuator(m_tile_properties_has_actuator);
+
+    if (ImGui::Checkbox("Actuated", &m_tile_properties_is_actuated))
+        tile.set_is_actuated(m_tile_properties_is_actuated);
+}
+
 void Application::draw_selection_window()
 {
     if (ImGui::Begin("Selection", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
         auto& tile = m_current_world->tile_map()->at(m_selected_tile_x, m_selected_tile_y);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        if (ImGui::BeginChild("Selection Image", ImVec2(64, 64), true,
-                              ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-        {
-            ImGui::PopStyleVar();
-            if (tile.block().has_value())
-            {
-                short frame_x = 0;
-                short frame_y = 0;
-
-                if (tile.block()->frame_x().has_value())
-                    frame_x = *tile.block()->frame_x();
-
-                if (tile.block()->frame_y().has_value())
-                    frame_y = *tile.block()->frame_y();
-
-                auto tex = *m_tile_textures.get(static_cast<u16>(tile.block()->id()));
-
-                ImGui::Image(reinterpret_cast<void*>(tex.gl_texture_id), ImVec2(64, 64),
-                             ImVec2((float) frame_x / (float) tex.width,
-                                    (float) frame_y / (float) tex.height),
-                             ImVec2(((float) frame_x + 16.0f) / (float) tex.width,
-                                    ((float) frame_y + 16.0f) / (float) tex.height));
-                ImGui::Separator();
-            }
-        }
-        else
-        {
-            ImGui::PopStyleVar();
-        }
-
-        ImGui::EndChild();
-
-        auto preview_string = tile.block().has_value() ?
-                              String::formatted("{}",
-                                                Terraria::s_tiles[static_cast<int>(tile.block()->id())].internal_name)
-                                                       : String::empty();
-
-        draw_tiles_combo_box(preview_string, [&tile](auto id)
-        {
-            if (!id.has_value())
-                tile.block() = {};
-            else
-                tile.block() = static_cast<Terraria::Tile::Block::Id>(*id);
-        });
-
-        if (tile.block().has_value() && Terraria::s_tiles[static_cast<int>(tile.block()->id())].frame_important)
-        {
-            ImGui::SetNextItemWidth(75.0f);
-            if (ImGui::InputInt("Frame X", &m_selected_frame_x, 18, 18) && tile.block().has_value())
-                tile.block()->frame_x() = m_selected_frame_x;
-
-            ImGui::SameLine();
-
-            ImGui::SetNextItemWidth(75.0f);
-            if (ImGui::InputInt("Frame Y", &m_selected_frame_y, 18, 18) && tile.block().has_value())
-                tile.block()->frame_y() = m_selected_frame_y;
-
-            ImGui::Separator();
-        }
-
-        if (ImGui::Checkbox("Red Wire", &m_selected_has_red_wire))
-            tile.set_red_wire(m_selected_has_red_wire);
-
-        if (ImGui::Checkbox("Green Wire", &m_selected_has_green_wire))
-            tile.set_green_wire(m_selected_has_green_wire);
-
-        if (ImGui::Checkbox("Blue Wire", &m_selected_has_blue_wire))
-            tile.set_blue_wire(m_selected_has_blue_wire);
-
-        if (ImGui::Checkbox("Yellow Wire", &m_selected_has_yellow_wire))
-            tile.set_yellow_wire(m_selected_has_yellow_wire);
-
-        if (ImGui::Checkbox("Actuator", &m_selected_has_actuator))
-            tile.set_has_actuator(m_selected_has_actuator);
-
-        if (ImGui::Checkbox("Actuated", &m_selected_is_actuated))
-            tile.set_is_actuated(m_selected_is_actuated);
+        draw_tile_properties(tile);
     }
 
     ImGui::End();
