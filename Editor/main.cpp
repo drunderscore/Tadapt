@@ -15,6 +15,7 @@
 #include <AK/MemoryStream.h>
 #include <LibCore/File.h>
 #include <LibCore/ArgsParser.h>
+#include <nfd.h>
 
 constexpr bool show_metrics_window = false;
 Application* s_application;
@@ -25,31 +26,10 @@ int main(int argc, char** argv)
 
     String world_path;
 
-    args_parser.add_positional_argument(world_path, "Path to the world file", "world");
+    args_parser.add_positional_argument(world_path, "Path to the world file", "world", Core::ArgsParser::Required::No);
 
     if (!args_parser.parse(argc, argv))
         return 1;
-
-    auto file_or_error = Core::File::open(world_path, Core::IODevice::OpenMode::ReadOnly);
-
-    if (file_or_error.is_error())
-    {
-        warnln("Failed to open world file: {}", file_or_error.error());
-        return 2;
-    }
-
-    auto file_bytes = file_or_error.value()->read_all();
-    auto bytes_stream = InputMemoryStream(file_bytes);
-
-    auto world_or_error = Terraria::World::try_load_world(bytes_stream);
-
-    if (world_or_error.is_error())
-    {
-        warnln("Failed to load world file: {}", world_or_error.error());
-        return 3;
-    }
-
-    auto world = world_or_error.release_value();
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) < 0)
     {
@@ -90,6 +70,38 @@ int main(int argc, char** argv)
     {
         warnln("Failed to initialize GLEW: {}", glewGetErrorString(glew_init_return));
         return 2;
+    }
+
+    RefPtr<Terraria::World> world;
+
+    if (!world_path.is_null())
+    {
+        auto file_or_error = Core::File::open(world_path, Core::OpenMode::ReadOnly);
+
+        if (file_or_error.is_error())
+        {
+            warnln("Failed to open world file: {}", file_or_error.error());
+            return 2;
+        }
+
+        auto file_bytes = file_or_error.value()->read_all();
+        auto bytes_stream = InputMemoryStream(file_bytes);
+
+        auto world_or_error = Terraria::World::try_load_world(bytes_stream);
+
+        if (world_or_error.is_error())
+        {
+            warnln("Failed to load world file: {}", world_or_error.error());
+            return 3;
+        }
+
+        world = world_or_error.release_value();
+    }
+
+    if (NFD_Init() != NFD_OKAY)
+    {
+        warnln("Failed to initialize NFD");
+        return 4;
     }
 
     s_application = new Application(world);

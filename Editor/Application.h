@@ -15,7 +15,7 @@
 class Application
 {
 public:
-    Application(RefPtr<Terraria::World> world);
+    explicit Application(RefPtr<Terraria::World> world = {});
 
     void process_event(SDL_Event*);
 

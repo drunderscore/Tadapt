@@ -23,7 +23,9 @@ target_include_directories(Editor SYSTEM PRIVATE
         ${CMAKE_BINARY_DIR}
         # FIXME: This is needed because imgui thought it would be funny to do #include <SDL.h>
         /usr/include/SDL2
+
+        nativefiledialog-extended/src/include
         )
 target_link_libraries(Editor PRIVATE LagomCore LagomGfx)
 
-target_link_libraries(Editor PRIVATE Terraria SDL2 GLEW GL)
+target_link_libraries(Editor PRIVATE Terraria SDL2 GLEW GL nfd)

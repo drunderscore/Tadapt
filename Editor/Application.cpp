@@ -13,6 +13,7 @@
 #include <LibGfx/PNGLoader.h>
 #include <LibTerraria/World.h>
 #include <LibTerraria/Model.h>
+#include <nfd.h>
 
 static const char* s_tool_names[] = {"Select", "Place Object", "Paint"};
 
@@ -30,7 +31,9 @@ Application::Application(RefPtr<Terraria::World> world)
 
     load_all_tile_texture_sheets();
     load_all_item_texture_sheets();
-    frame_implicit_tiles();
+
+    if (m_current_world)
+        frame_implicit_tiles();
 
     m_selected_object = &Object::all_objects().at(0);
 }
@@ -225,8 +228,34 @@ void Application::draw_main_menu_bar()
         {
             if (ImGui::MenuItem("Open"))
             {
-                // TODO: Implement this once loading after main works? See main.cpp for bug explanation.
-                VERIFY_NOT_REACHED();
+                nfdchar_t* path;
+                nfdfilteritem_t filter[1] = {{"World File", "wld"}};
+                auto file_dialog_result = NFD_OpenDialogN(&path, filter, 1, nullptr);
+                if (file_dialog_result == NFD_OKAY)
+                {
+                    m_current_world = nullptr;
+
+                    auto file_or_error = Core::File::open(path, Core::OpenMode::ReadOnly);
+
+                    if (file_or_error.is_error())
+                    {
+                        warnln("Failed to open world file: {}", file_or_error.error());
+                    }
+                    else
+                    {
+                        auto file_bytes = file_or_error.value()->read_all();
+                        auto bytes_stream = InputMemoryStream(file_bytes);
+
+                        outln("Loading world");
+                        m_current_world = Terraria::World::try_load_world(bytes_stream).release_value();
+                        set_selected_tile(0, 0);
+                        m_offset_x = 0;
+                        m_offset_y = 0;
+                        frame_implicit_tiles();
+                    }
+
+                    NFD_FreePathN(path);
+                }
             }
             ImGui::EndMenu();
         }
