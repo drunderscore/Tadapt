@@ -24,6 +24,6 @@ target_include_directories(Editor SYSTEM PRIVATE
         # FIXME: This is needed because imgui thought it would be funny to do #include <SDL.h>
         /usr/include/SDL2
         )
-target_link_libraries(Editor PRIVATE Lagom)
+target_link_libraries(Editor PRIVATE LagomCore LagomGfx)
 
 target_link_libraries(Editor PRIVATE Terraria SDL2 GLEW GL)

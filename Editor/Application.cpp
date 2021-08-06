@@ -563,7 +563,7 @@ void Application::draw_tile_properties(Terraria::Tile& tile)
         if (!id.has_value())
             tile.block() = {};
         else
-            tile.block() = static_cast<Terraria::Tile::Block::Id>(*id);
+            tile.block() = Terraria::Tile::Block(static_cast<Terraria::Tile::Block::Id>(*id));
     });
 
     if (tile.block().has_value() && Terraria::s_tiles[static_cast<int>(tile.block()->id())].frame_important)

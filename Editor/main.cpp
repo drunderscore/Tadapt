@@ -21,11 +21,6 @@ Application* s_application;
 
 int main(int argc, char** argv)
 {
-    // FIXME: There is some weird bug going on here... move this
-    // Tappy can load this world fine. It loads it in main after using a Core::ArgsParser
-    // Here, we can load it, but if we put it below the SDL_Init or lower, it fails with some OOB indexing
-    // because some RLE is wrong. what??? it's not a race condition, but the order of the code is affecting this.
-    // ill deal with this later but im just so mad at this for being completely insane.
     Core::ArgsParser args_parser;
 
     String world_path;
